@@ -1,0 +1,1 @@
+cmd_/home/seed/crypto-ns/lab5/netfilter/Module.symvers := sed 's/\.ko$$/\.o/' /home/seed/crypto-ns/lab5/netfilter/modules.order | scripts/mod/modpost -m -a  -o /home/seed/crypto-ns/lab5/netfilter/Module.symvers -e -i Module.symvers   -T -

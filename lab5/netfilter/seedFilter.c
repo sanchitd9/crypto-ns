@@ -12,31 +12,6 @@
 
 static struct nf_hook_ops hook1, hook2, hook3, hook4, hook5, hook6, hook7, hook8; 
 
-unsigned int blockICMP(void *priv, struct sk_buff *skb, const struct nf_hook_state *state) {
-   struct iphdr *iph;
-   struct icmphdr *icmph;
-
-   u16 type = 8;
-   char ip[16] = "10.9.0.1";
-   u32 ip_addr;
-
-   if (!skb) return NF_ACCEPT;
-
-   iph = ip_hdr(skb);
-   // Convert the IPv4 address from dotted decimal to 32-bit binary
-   in4_pton(ip, -1, (u8 *)&ip_addr, '\0', NULL);
-
-   if (iph->protocol == IPPROTO_ICMP) {
-      icmph = icmp_hdr(skb);
-      if (iph->daddr == ip_addr && icmph->type == type) {
-         printk(KERN_WARNING "*** Dropping %pI4 (ICMP), type %d\n", &(iph->daddr), type);
-         return NF_DROP;
-      }
-   }
-
-   return NF_ACCEPT;
-}
-
 unsigned int blockTelnet(void *priv, struct sk_buff *skb, const struct nf_hook_state *state) {
    struct iphdr *iph;
    struct tcphdr *tcph;
@@ -52,15 +27,40 @@ unsigned int blockTelnet(void *priv, struct sk_buff *skb, const struct nf_hook_s
    in4_pton(ip, -1, (u8 *)&ip_addr, '\0', NULL);
 
    if (iph->protocol == IPPROTO_TCP) {
-      tcph = tcp_hdr(skb);
-      if (iph->daddr == ip_addr && ntohs(tcph->dest) == port) {
-         printk(KERN_WARNING "*** Dropping %pI4 (TCP), port %d\n", &(iph->daddr), port);
-         return NF_DROP;
-      }
+       tcph = tcp_hdr(skb);
+       if (iph->daddr == ip_addr && ntohs(tcph->dest) == port) {
+            printk(KERN_WARNING "*** Dropping %pI4 (TCP), port %d\n", &(iph->daddr), port);
+            return NF_DROP;
+        }
    }
    return NF_ACCEPT;
+
 }
 
+unsigned int blockICMP(void *priv, struct sk_buff *skb, const struct nf_hook_state *state) {
+   struct iphdr *iph;
+   struct icmphdr *icmph;
+
+   u16 type = 8;
+   char ip[16] = "10.9.0.1";
+   u32 ip_addr;
+
+   if (!skb) return NF_ACCEPT;
+
+   iph = ip_hdr(skb);
+   // Convert the IPv4 address from dotted decimal to 32-bit binary
+   in4_pton(ip, -1, (u8 *)&ip_addr, '\0', NULL);
+
+   if (iph->protocol == IPPROTO_ICMP) {
+       icmph = icmp_hdr(skb);
+       if (iph->daddr == ip_addr && icmph->type == type) {
+            printk(KERN_WARNING "*** Dropping %pI4 (ICMP), type %d\n", &(iph->daddr), type);
+            return NF_DROP;
+        }
+   }
+   return NF_ACCEPT;
+
+}
 
 unsigned int blockUDP(void *priv, struct sk_buff *skb, const struct nf_hook_state *state) {
    struct iphdr *iph;
@@ -77,11 +77,11 @@ unsigned int blockUDP(void *priv, struct sk_buff *skb, const struct nf_hook_stat
    in4_pton(ip, -1, (u8 *)&ip_addr, '\0', NULL);
 
    if (iph->protocol == IPPROTO_UDP) {
-      udph = udp_hdr(skb);
-      if (iph->daddr == ip_addr && ntohs(udph->dest) == port) {
-         printk(KERN_WARNING "*** Dropping %pI4 (UDP), port %d\n", &(iph->daddr), port);
-         return NF_DROP;
-      }
+       udph = udp_hdr(skb);
+       if (iph->daddr == ip_addr && ntohs(udph->dest) == port) {
+            printk(KERN_WARNING "*** Dropping %pI4 (UDP), port %d\n", &(iph->daddr), port);
+            return NF_DROP;
+        }
    }
    return NF_ACCEPT;
 }
@@ -103,12 +103,13 @@ unsigned int printInfo(void *priv, struct sk_buff *skb, const struct nf_hook_sta
    printk(KERN_INFO "*** %s\n", hook); // Print out the hook info
 
    iph = ip_hdr(skb);
-
+   
    switch (iph->protocol) {
       case IPPROTO_UDP:  protocol = "UDP";   break;
       case IPPROTO_TCP:  protocol = "TCP";   break;
       case IPPROTO_ICMP: protocol = "ICMP";  break;
       default:           protocol = "OTHER"; break;
+
    }
 
    // Print out the IP addresses and protocol
@@ -119,46 +120,33 @@ unsigned int printInfo(void *priv, struct sk_buff *skb, const struct nf_hook_sta
 
 
 int registerFilter(void) {
+
    printk(KERN_INFO "Registering filters.\n");
 
-   /**
-    * Hooks 1 - 5 are for printing information.
-    * Hook 1 -> PRE ROUTING
-    * Hook 2 -> LOCAL IN
-    * Hook 3 -> FORWARD
-    * Hook 4 -> LOCAL OUT
-    * Hook 5 -> POST ROUTING
-    * **/
+   hook1.hook = printInfo;
+   hook1.hooknum = NF_INET_PRE_ROUTING;
+   hook1.pf = PF_INET;
+   hook1.priority = NF_IP_PRI_FIRST;
+   nf_register_net_hook(&init_net, &hook1);
 
-   // PRE ROUTING
-   // hook1.hook = printInfo;
-   // hook1.hooknum = NF_INET_PRE_ROUTING;
-   // hook1.pf = PF_INET;
-   // hook1.priority = NF_IP_PRI_FIRST;
-   // nf_register_net_hook(&init_net, &hook1);
-
-   // LOCAL IN
    hook2.hook = printInfo;
    hook2.hooknum = NF_INET_LOCAL_IN;
    hook2.pf = PF_INET;
    hook2.priority = NF_IP_PRI_FIRST;
    nf_register_net_hook(&init_net, &hook2);
 
-   // FORWARD
    hook3.hook = printInfo;
    hook3.hooknum = NF_INET_FORWARD;
    hook3.pf = PF_INET;
    hook3.priority = NF_IP_PRI_FIRST;
    nf_register_net_hook(&init_net, &hook3);
 
-   // LOCAL OUT
    hook4.hook = printInfo;
    hook4.hooknum = NF_INET_LOCAL_OUT;
    hook4.pf = PF_INET;
    hook4.priority = NF_IP_PRI_FIRST;
    nf_register_net_hook(&init_net, &hook4);
 
-   // POST ROUTING
    hook5.hook = printInfo;
    hook5.hooknum = NF_INET_POST_ROUTING;
    hook5.pf = PF_INET;
@@ -166,21 +154,18 @@ int registerFilter(void) {
    nf_register_net_hook(&init_net, &hook5);
 
 
-   // Hook 6 -> Blocks DNS requests to 8.8.4.4
    hook6.hook = blockUDP;
    hook6.hooknum = NF_INET_POST_ROUTING;
    hook6.pf = PF_INET;
    hook6.priority = NF_IP_PRI_FIRST;
    nf_register_net_hook(&init_net, &hook6);
 
-   // Hook 7 -> Blocks ICMP Echo requests to 10.9.0.1
    hook7.hook = blockICMP;
    hook7.hooknum = NF_INET_LOCAL_IN;
    hook7.pf = PF_INET;
    hook7.priority = NF_IP_PRI_FIRST;
    nf_register_net_hook(&init_net, &hook7);
 
-   // Hook 8 -> Blocks Telnet requests to 10.9.0.1
    hook8.hook = blockTelnet;
    hook8.hooknum = NF_INET_LOCAL_IN;
    hook8.pf = PF_INET;

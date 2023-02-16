@@ -1,0 +1,1 @@
+cmd_/home/seed/crypto-ns/lab5/netfilter/seedFilter.ko := ld -r  -m elf_x86_64 -z noexecstack   --build-id=sha1  -T scripts/module.lds -o /home/seed/crypto-ns/lab5/netfilter/seedFilter.ko /home/seed/crypto-ns/lab5/netfilter/seedFilter.o /home/seed/crypto-ns/lab5/netfilter/seedFilter.mod.o;  true
