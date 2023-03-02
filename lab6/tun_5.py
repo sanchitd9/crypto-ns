@@ -32,8 +32,9 @@ os.system("ip route add 192.168.60.0/24 dev {}".format(ifname))
 while True:
    # Get a packet from the tun interface
    packet = os.read(tun, 2048)
+
    if packet:
        ip = IP(packet)
        print(ip.summary())
 
-       os.write(tun, b"hello, world")
+       os.write(tun, b"sanchit")
